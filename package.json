@@ -10,7 +10,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "tslint -p tsconfig.json",
     "release": "echo 'Incrementing version and publishing to npmjs.com...' && cp package.json ./build/package.json && np",
-    "test": "jest --config jestconfig.json",
+    "test": "jest",
     "version": "echo 'Executing npm publish hook: version... (rebuilds ./build)' && npm run build"
   },
   "keywords": [
@@ -31,10 +31,6 @@
   "devDependencies": {
     "@types/jest": "^29.4.0",
     "@types/node": "^18.14.6",
-    "@typescript-eslint/eslint-plugin": "^5.54.0",
-    "@typescript-eslint/parser": "^5.54.0",
-    "eslint": "^8.35.0",
-    "eslint-plugin-jest": "^27.2.1",
     "jest": "^29.4.3",
     "np": "^7.6.3",
     "prettier": "^2.8.4",

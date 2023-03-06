@@ -1,7 +1,7 @@
-import { ComposableMachine } from '../../../src/ComposableMachine'
+const { ComposableMachine } = require( '../../../src/ComposableMachine')
 
 
 
 test('ComposableMachine', () => {
-  expect(new ComposableMachine()).to.not.throw
+  expect(() => new ComposableMachine()).not.toThrow()
 });

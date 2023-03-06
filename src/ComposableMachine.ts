@@ -54,11 +54,11 @@ export interface IComposableMachineClass {
   new (pathInParent: string[], map: TSubmachineMap): ComposableMachine
 }
 
-export abstract class ComposableMachine {
+export class ComposableMachine {
   map: TSubmachineMap // Defines input/output connections to parent machine (empty map for outermost machine).
   pathInParent: string[] // Location in state hierarchy (empty array for outermost machine).
 
-  protected constructor(pathInParent: string[] = [], map: TSubmachineMap = {}) {
+  constructor(pathInParent: string[] = [], map: TSubmachineMap = {}) {
     this.pathInParent = pathInParent
     this.map = map
     const localFieldnames = this.mergedContextFieldnames()
@@ -370,7 +370,9 @@ export abstract class ComposableMachine {
   // Overridden by child classes
   // Machine definition without initial context and auto-created fields.
   // States to be replaced by submachines are marked by setting metadata
-  abstract defMachine(): TMachineDefOrStateDef
+  defMachine(): TMachineDefOrStateDef {
+    return {}
+  }
 
   // Extend to define additional output fields
   defOutputs(): Record<string, any> {
