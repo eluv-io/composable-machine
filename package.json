@@ -6,6 +6,7 @@
   "scripts": {
     "build": "rimraf ./build && tsc",
     "lint": "eslint . --ext .ts",
+    "release": "echo 'Incrementing version and publishing to npmjs.com...' && cp package.json ./build/package.json && np",
     "test": "jest"
   },
   "keywords": [
