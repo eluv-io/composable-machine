@@ -4,7 +4,7 @@
 // TODO: runtime validators
 // TODO: abbreviated namespaces
 
-import {assign} from 'xstate'
+import { assign } from 'xstate'
 
 import filterKV from '@eluvio/elv-js-helpers/Functional/filterKV'
 import mergeRight from '@eluvio/elv-js-helpers/Functional/mergeRight'
@@ -18,14 +18,19 @@ import {
   namespaceKeys,
   pathInParent2ObjectPath,
   submachines
-} from './utils';
+} from './utils'
 
 import {
   TConf,
   TContextFieldDef,
-  TFieldMap, TFoundSubmachine, tgFieldHasDefault, tgFieldHasInitial,
+  TFieldMap,
+  TFoundSubmachine,
+  tgFieldHasDefault,
+  tgFieldHasInitial,
   tgIsArray,
-  tgIsFunction, tgIsUndefined, tgMapHasInputs,
+  tgIsFunction,
+  tgIsUndefined,
+  tgMapHasInputs,
   tgStateHasAfter,
   tgStateHasContext,
   tgStateHasEntry,
@@ -36,43 +41,45 @@ import {
   tgStateHasStates,
   tgTransHasActions,
   TInvokeDef,
-  TMachineDefOrStateDef,
+  TMachineDefOrStateDef, TStringOrStrArray,
   TSubmachineMap,
   TTransitionSpec,
-  TTransitionSpecOrArray
-} from './types'
+  TTransitionSpecOrArray, TxstateEvent,
+} from './types';
 
-import getPath from "@eluvio/elv-js-helpers/Functional/getPath";
-import setPath from "@eluvio/elv-js-helpers/Functional/setPath";
-
+import getPath from '@eluvio/elv-js-helpers/Functional/getPath'
+import setPath from '@eluvio/elv-js-helpers/Functional/setPath'
 
 export interface IComposableMachineClass {
-  new(pathInParent: string[], map: TSubmachineMap): ComposableMachine
+  new (pathInParent: string[], map: TSubmachineMap): ComposableMachine
 }
 
 export abstract class ComposableMachine {
   map: TSubmachineMap // Defines input/output connections to parent machine (empty map for outermost machine).
   pathInParent: string[] // Location in state hierarchy (empty array for outermost machine).
 
-  constructor(pathInParent: string[] = [], map: TSubmachineMap = {}) {
+  protected constructor(pathInParent: string[] = [], map: TSubmachineMap = {}) {
     this.pathInParent = pathInParent
     this.map = map
     const localFieldnames = this.mergedContextFieldnames()
     const self = this
     if (tgMapHasInputs(map)) {
-      mapObjKeys(
-        (childFieldName: string) => {
-          if (!localFieldnames.includes(childFieldName)) {
-            throw Error(`Input map error: field '${childFieldName}' not defined in context of child machine (state: ${self.name()}, submachine: ${self.className()})`)
-          }
-        },
-        map.context.inputs
-      )
+      mapObjKeys((childFieldName: string) => {
+        if (!localFieldnames.includes(childFieldName)) {
+          throw Error(
+            `Input map error: field '${childFieldName}' not defined in context of child machine (state: ${self.name()}, submachine: ${self.className()})`
+          )
+        }
+      }, map.context.inputs)
     }
   }
 
   // Built-in action - log params to console
-  _act_LogArgs(context: Record<string, any>, event: TxstateEvent, meta: object): void {
+  _act_LogArgs(
+    context: Record<string, any>,
+    event: TxstateEvent,
+    meta: object
+  ): void {
     console.debug(this.notificationPrefix())
     console.debug(context)
     console.debug(event)
@@ -80,19 +87,24 @@ export abstract class ComposableMachine {
   }
 
   _act_NotifyError(context: Record<string, any>, event: TxstateEvent): void {
-    this.localContext(context, '_notifier').error(this.notificationPrefix() + (event.data?.message || JSON.stringify(event)))
+    this.localContext(context, '_notifier').error(
+      this.notificationPrefix() + (event.data?.message || JSON.stringify(event))
+    )
   }
 
   _act_NotifySuccess(context: Record<string, any>): void {
-    this.localContext(context, '_notifier').success(this.notificationPrefix() + this.defSuccessMessage())
+    this.localContext(context, '_notifier').success(
+      this.notificationPrefix() + this.defSuccessMessage()
+    )
   }
 
   // Built-in action - record activation of machine/submachine to context
   _act_SaveEntryToContext(): Function {
     const self = this
     return this.localAssign({
-      _firstEnteredAt: (context: object) => self.localContext(context, '_firstEntredAt') || (new Date),
-      _lastEnteredAt: () => new Date
+      _firstEnteredAt: (context: object) =>
+        self.localContext(context, '_firstEntredAt') || new Date(),
+      _lastEnteredAt: () => new Date()
     })
   }
 
@@ -100,22 +112,21 @@ export abstract class ComposableMachine {
   _act_SaveErrorToContext(): Function {
     return this.localAssign({
       _error: (_: object, event: TxstateEvent) => event.data,
-      _errorString: (_: object, event: TxstateEvent) => event.data?.message || `${event.data}`,
-      _lastFailedAt: () => new Date
+      _errorString: (_: object, event: TxstateEvent) =>
+        event.data?.message || `${event.data}`,
+      _lastFailedAt: () => new Date()
     })
   }
 
   // Built-in action - save success to context
   _act_SaveSuccessToContext(): Function {
     return this.localAssign({
-      _lastSucceededAt: () => new Date,
+      _lastSucceededAt: () => new Date(),
       _result: (_: object, event: TxstateEvent) => event.data
     })
   }
 
-  _act_ValidateInputs(): void {
-
-  }
+  _act_ValidateInputs(): void {}
 
   // Base class built-in actions
   baseActions(): Record<string, Function> {
@@ -135,7 +146,7 @@ export abstract class ComposableMachine {
     return {
       _createdAt: {
         desc: 'Date/time that machine (or submachine) context was first instantiated',
-        initial: () => new Date,
+        initial: () => new Date(),
         type: Date
       },
       _data: {
@@ -225,7 +236,7 @@ export abstract class ComposableMachine {
       context: {
         inputs: {
           _logger: '_logger',
-          _notifier: '_notifier',
+          _notifier: '_notifier'
         },
         outputs: {}
       }
@@ -244,26 +255,26 @@ export abstract class ComposableMachine {
 
   // Returns config (actions and services) to use as second argument for createMachine()
   conf(): TConf {
-    let result: TConf = ({
+    let result: TConf = {
       actions: this.namespaceObjKeys(this.mergedActions()),
       services: this.namespaceObjKeys(this.mergedServices())
-    })
+    }
 
     for (const foundSubmachineNode of this.submachineStates()) {
-      const childPathInParent = this.pathInParent.concat(foundSubmachineNode.path)
-      const submachineClass = this.defImportedMachines()[foundSubmachineNode.submachine]
-      const submachineObj = new submachineClass(childPathInParent, foundSubmachineNode.map || {})
+      const childPathInParent = this.pathInParent.concat(
+        foundSubmachineNode.path
+      )
+      const submachineClass =
+        this.defImportedMachines()[foundSubmachineNode.submachine]
+      const submachineObj = new submachineClass(
+        childPathInParent,
+        foundSubmachineNode.map || {}
+      )
       const submachineConf = submachineObj.conf()
-      result = ({
-        actions: mergeRight(
-          result.actions,
-          submachineConf.actions
-        ),
-        services: mergeRight(
-          result.services,
-          submachineConf.services
-        )
-      })
+      result = {
+        actions: mergeRight(result.actions, submachineConf.actions),
+        services: mergeRight(result.services, submachineConf.services)
+      }
     }
 
     return result
@@ -277,7 +288,7 @@ export abstract class ComposableMachine {
     let result = this.defMachine()
     result.id = this.className() // this will get removed by parent if this is a submachine
     result.description = this.className()
-    result.predictableActionArguments = true  // this will get removed by parent if this is a submachine
+    result.predictableActionArguments = true // this will get removed by parent if this is a submachine
 
     result.context = this.namespaceObjKeys(this.mergedInitialContext())
 
@@ -286,23 +297,31 @@ export abstract class ComposableMachine {
 
     // inject submachines
     for (const foundSubmachineNode of this.submachineStates()) {
-      const childPathInParent = this.pathInParent.concat(foundSubmachineNode.path)
+      const childPathInParent = this.pathInParent.concat(
+        foundSubmachineNode.path
+      )
       // intersperses 'states' before each state name, e.g. ['foo', 'bar'] => ['states, 'foo', 'states', 'bar']
       const pathIncludingStates = pathInParent2ObjectPath(childPathInParent)
       const originalState = getPath(pathIncludingStates, result)
-      const submachineClass = this.defImportedMachines()[foundSubmachineNode.submachine]
+      const submachineClass =
+        this.defImportedMachines()[foundSubmachineNode.submachine]
       // double-check that any input map refers to fields that actually exist in parent
-      if (!tgIsUndefined(foundSubmachineNode.map) && tgMapHasInputs(foundSubmachineNode.map)) {
-        mapObjValues(
-          (parentFieldName: string) => {
-            if (!parentFieldnames.includes(parentFieldName)) {
-              throw Error(`Input map error: field '${parentFieldName}' does not exist in parent machine (state: ${self.name()}, machine: ${self.className()})`)
-            }
-          },
-          foundSubmachineNode.map.context.inputs
-        )
+      if (
+        !tgIsUndefined(foundSubmachineNode.map) &&
+        tgMapHasInputs(foundSubmachineNode.map)
+      ) {
+        mapObjValues((parentFieldName: string) => {
+          if (!parentFieldnames.includes(parentFieldName)) {
+            throw Error(
+              `Input map error: field '${parentFieldName}' does not exist in parent machine (state: ${self.name()}, machine: ${self.className()})`
+            )
+          }
+        }, foundSubmachineNode.map.context.inputs)
       }
-      const submachineObj = new submachineClass(childPathInParent, foundSubmachineNode.map || {})
+      const submachineObj = new submachineClass(
+        childPathInParent,
+        foundSubmachineNode.map || {}
+      )
 
       const submachineDef = submachineObj.def()
       delete submachineDef.devTools
@@ -313,10 +332,7 @@ export abstract class ComposableMachine {
       result.context = result.context || {}
       if (tgStateHasContext(submachineDef)) {
         // merge (initial) subcontext into parent
-        result.context = mergeRight(
-          result.context,
-          submachineDef.context
-        )
+        result.context = mergeRight(result.context, submachineDef.context)
       }
       delete submachineDef.context
 
@@ -325,11 +341,7 @@ export abstract class ComposableMachine {
         submachineDef.onDone = originalState.onDone
       }
 
-      result = setPath(
-        pathIncludingStates,
-        submachineDef,
-        result
-      )
+      result = setPath(pathIncludingStates, submachineDef, result)
     }
 
     return result
@@ -366,7 +378,8 @@ export abstract class ComposableMachine {
       _error: 'Last error object or message',
       _lastAttemptedAt: 'Last execution (including retries)',
       _lastFailedAt: 'Last error date/time',
-      _lastSucceededAt: 'Last success date/time (should always be either null or later than lastFailedAt)',
+      _lastSucceededAt:
+        'Last success date/time (should always be either null or later than lastFailedAt)'
     }
   }
 
@@ -387,7 +400,10 @@ export abstract class ComposableMachine {
   localAssign(assignments: object): Function {
     const definedInputs = this.mergedInputFieldnames()
     for (const fieldName of Object.keys(assignments)) {
-      if (definedInputs.includes(fieldName)) throw Error(`${this.notificationPrefix()}Attempt to assign to input field '${fieldName}' (state: ${this.name()}, submachine: ${this.className()})`)
+      if (definedInputs.includes(fieldName))
+        throw Error(
+          `${this.notificationPrefix()}Attempt to assign to input field '${fieldName}' (state: ${this.name()}, submachine: ${this.className()})`
+        )
     }
     return assign(this.remapAssignments(assignments))
   }
@@ -407,18 +423,12 @@ export abstract class ComposableMachine {
 
   // Returns merged actions - base class + subclass
   mergedActions(): Record<string, Function> {
-    return mergeRight(
-      this.baseActions(),
-      this.defActions()
-    )
+    return mergeRight(this.baseActions(), this.defActions())
   }
 
   // Returns merged context definitions - base class + subclass
   mergedContextDef(): Record<string, TContextFieldDef> {
-    return mergeRight(
-      this.baseContext(),
-      this.defContext()
-    )
+    return mergeRight(this.baseContext(), this.defContext())
   }
 
   mergedContextFieldnames(): string[] {
@@ -448,8 +458,13 @@ export abstract class ComposableMachine {
       const fieldDef = contextDef[contextFieldname]
       // check for inputs mapped from parent
       if (mappedFieldnames.includes(contextFieldname)) {
-        if (!inputFieldnames.includes(contextFieldname)) throw Error(`${contextFieldname} is not an input field (state: ${this.name()}, submachine: ${this.className()})`)
-        result[contextFieldname] = this.parentContextGetFn(inputMap[contextFieldname])
+        if (!inputFieldnames.includes(contextFieldname))
+          throw Error(
+            `${contextFieldname} is not an input field (state: ${this.name()}, submachine: ${this.className()})`
+          )
+        result[contextFieldname] = this.parentContextGetFn(
+          inputMap[contextFieldname]
+        )
       } else if (tgFieldHasInitial(fieldDef)) {
         // Not mapped from parent
         // Has initial value defined
@@ -478,7 +493,7 @@ export abstract class ComposableMachine {
 
   // If this is a submachine and an input map was specified, and input map has
   // an entry for submachine context field, returns the substitution (either a string or function).
-  // Otherwise returns undefined
+  // Returns undefined otherwise
   mergedInputMapEntry(fieldname: string): string | Function | undefined {
     return this.mergedInputMap()[fieldname]
   }
@@ -487,38 +502,35 @@ export abstract class ComposableMachine {
   // (but only if submachine, otherwise empty map)
   mergedMap(): TSubmachineMap {
     return this.isSubmachine()
-      ? ({
-        actions: mergeRight(
-          this.baseMap().actions || {},
-          this.map.actions || {}
-        ),
-        context: {
-          inputs: mergeRight(
-            this.baseMap().context?.inputs || {},
-            this.map.context?.inputs || {}
+      ? {
+          actions: mergeRight(
+            this.baseMap().actions || {},
+            this.map.actions || {}
           ),
-          outputs: mergeRight(
-            this.baseMap().context?.outputs || {},
-            this.map.context?.outputs || {}
-          )
+          context: {
+            inputs: mergeRight(
+              this.baseMap().context?.inputs || {},
+              this.map.context?.inputs || {}
+            ),
+            outputs: mergeRight(
+              this.baseMap().context?.outputs || {},
+              this.map.context?.outputs || {}
+            )
+          }
         }
-      })
-      : ({
-        actions: {},
-        context: {
-          inputs: {},
-          outputs: {}
+      : {
+          actions: {},
+          context: {
+            inputs: {},
+            outputs: {}
+          }
         }
-      })
   }
 
   // Returns merged services - base class + subclass
   // (currently the base class has no built-in services)
   mergedServices(): Record<string, Function> {
-    return mergeRight(
-      this.baseServices(),
-      this.defServices()
-    )
+    return mergeRight(this.baseServices(), this.defServices())
   }
 
   // Machine (or state) name.
@@ -548,13 +560,20 @@ export abstract class ComposableMachine {
   }
 
   namespaceRefs(d: TMachineDefOrStateDef): TMachineDefOrStateDef {
-    if (tgStateHasAfter(d)) d.after = mapObjValues(this.namespaceTransitionSpecOrArray.bind(this), d.after)
+    if (tgStateHasAfter(d))
+      d.after = mapObjValues(
+        this.namespaceTransitionSpecOrArray.bind(this),
+        d.after
+      )
     if (tgStateHasEntry(d)) d.entry = this.namespaceStrOrArray(d.entry)
     if (tgStateHasExit(d)) d.exit = this.namespaceStrOrArray(d.exit)
     if (tgStateHasInvoke(d)) d.invoke = this.namespaceInvokeDef(d.invoke)
-    if (tgStateHasOn(d)) d.on = mapObjValues(this.namespaceTransitionSpecOrArray.bind(this), d.on)
-    if (tgStateHasOnDone(d)) d.onDone = this.namespaceTransitionSpecOrArray(d.onDone)
-    if (tgStateHasStates(d)) d.states = mapObjValues(this.namespaceRefs.bind(this), d.states)
+    if (tgStateHasOn(d))
+      d.on = mapObjValues(this.namespaceTransitionSpecOrArray.bind(this), d.on)
+    if (tgStateHasOnDone(d))
+      d.onDone = this.namespaceTransitionSpecOrArray(d.onDone)
+    if (tgStateHasStates(d))
+      d.states = mapObjValues(this.namespaceRefs.bind(this), d.states)
     return d
   }
 
@@ -581,7 +600,9 @@ export abstract class ComposableMachine {
   }
 
   // Prepend namespace to action name(s) if present for 1 spec or for each spec in an array
-  namespaceTransitionSpecOrArray(t: TTransitionSpecOrArray): TTransitionSpecOrArray {
+  namespaceTransitionSpecOrArray(
+    t: TTransitionSpecOrArray
+  ): TTransitionSpecOrArray {
     if (tgIsArray(t)) {
       return t.map(this.namespaceTransitionSpec.bind(this))
     } else {
@@ -635,7 +656,9 @@ export abstract class ComposableMachine {
   }
 
   // Prepend parent's namespace to action name(s) if present for 1 spec or for each spec in an array
-  parentNamespaceTransitionSpecOrArray(t: TTransitionSpecOrArray): TTransitionSpecOrArray {
+  parentNamespaceTransitionSpecOrArray(
+    t: TTransitionSpecOrArray
+  ): TTransitionSpecOrArray {
     if (tgIsArray(t)) {
       return t.map(this.parentNamespaceTransitionSpec.bind(this))
     } else {
@@ -650,9 +673,15 @@ export abstract class ComposableMachine {
 
     for (const key of Object.keys(assignments)) {
       // check that field assigned is defined in context
-      if (!contextFieldnames.includes(key)) throw Error(`Assign(): field '${key}' not defined in local machine context (state: ${this.name()}, submachine: ${this.className()})`)
+      if (!contextFieldnames.includes(key))
+        throw Error(
+          `Assign(): field '${key}' not defined in local machine context (state: ${this.name()}, submachine: ${this.className()})`
+        )
       // check that field is not an input (context fields that have been redirected to pull from parent context)
-      if (inputFieldnames.includes(key)) throw Error(`Assign(): field '${key}' is an input field in local machine context (state: ${this.name()}, submachine: ${this.className()})`)
+      if (inputFieldnames.includes(key))
+        throw Error(
+          `Assign(): field '${key}' is an input field in local machine context (state: ${this.name()}, submachine: ${this.className()})`
+        )
     }
 
     // check that mapped outputs (context fields that have been redirected to pull from child context) are not being assigned to
@@ -661,14 +690,16 @@ export abstract class ComposableMachine {
     return this.namespaceObjKeys(assignments)
   }
 
-
   remapInitialContext(): Record<string, any> {
     const result = this.mergedInitialContext()
 
     // Process input map substitutions
     const definedInputs = this.mergedInputFieldnames()
     for (const fieldName of this.remappedInputFieldNames()) {
-      if (!definedInputs.includes(fieldName)) throw Error(`Field '${fieldName}' not found in submachine's defined inputs (state: ${this.name()}, submachine: ${this.className()})`)
+      if (!definedInputs.includes(fieldName))
+        throw Error(
+          `Field '${fieldName}' not found in submachine's defined inputs (state: ${this.name()}, submachine: ${this.className()})`
+        )
       result[fieldName] = this.mergedInputMapEntry(fieldName)
     }
 
@@ -681,7 +712,10 @@ export abstract class ComposableMachine {
     return Object.keys(this.mergedInputMap())
   }
 
-  resolveIndirection(context: Record<string, any>, namespacedFieldname: string): any {
+  resolveIndirection(
+    context: Record<string, any>,
+    namespacedFieldname: string
+  ): any {
     console.log(`resolving field '${namespacedFieldname}'`)
     let val = context[namespacedFieldname]
     // If value is a function that returns a function, call it to unwrap one layer.
@@ -692,10 +726,8 @@ export abstract class ComposableMachine {
       val = val(context)
     }
     // Don't return val, it has been through a variable assignment and may
-    // have lost reactivity. Instead return original ref
-    return (tgIsFunction(val))
-      ? val(context)
-      : context[namespacedFieldname]
+    // have lost reactivity. Instead, return original ref
+    return tgIsFunction(val) ? val(context) : context[namespacedFieldname]
   }
 
   submachineStates(): TFoundSubmachine[] {

@@ -5,12 +5,6 @@ declare interface TPair {
   snd(): any;
 }
 
-declare type TStringOrStrArray = string | string[]
-
-declare type TxstateEvent = {
-  data?: Record<string,any>
-}
-
 declare interface TNotifier {
   error(message: string): any;
   info(message: string): any;
