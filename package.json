@@ -1,13 +1,14 @@
 {
   "name": "composable-machine",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "description": "Wrapper for xstate to allow machine composition",
   "main": "ComposableMachine.ts",
   "scripts": {
     "build": "rimraf ./build && tsc",
     "lint": "eslint . --ext .ts",
     "release": "echo 'Incrementing version and publishing to npmjs.com...' && cp package.json ./build/package.json && np",
-    "test": "jest"
+    "test": "jest",
+    "version": "echo 'Executing npm publish hook: version... (rebuilds ./build)' && npm run build"
   },
   "keywords": [
     "Eluvio",
