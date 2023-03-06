@@ -3,18 +3,20 @@
   "include": ["src/**/*", "tests/**/*", "declarations.d.ts"],
   "exclude": ["node_modules", "**/__tests__/*"],
   "compilerOptions": {
-    "target": "es2016",
-    "lib": ["es6"],
-    "module": "commonjs",
-    "declaration": true,
-    "rootDir": "src",
-    "resolveJsonModule": true,
     "allowJs": true,
-    "outDir": "build",
+    "declaration": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "strict": true,
+    "inlineSources": true,
+    "lib": ["es6"],
+    "module": "commonjs",
     "noImplicitAny": true,
-    "skipLibCheck": true
+    "outDir": "build",
+    "resolveJsonModule": true,
+    "rootDir": "src",
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "es2016"
   }
 }

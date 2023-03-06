@@ -6,10 +6,10 @@
   "main": "ComposableMachine.ts",
   "types": "ComposableMachine.d.ts",
   "scripts": {
-    "build": "rimraf ./build && mkdir build && cp package.json ./build/ && tsc",
+    "build": "rimraf ./build && mkdir build && cp package.json ./build/ && cp LICENSE ./build/ && tsc",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "tslint -p tsconfig.json",
-    "release": "echo 'Incrementing version and publishing to npmjs.com...' && cp package.json ./build/package.json && np",
+    "release": "echo 'Incrementing version and publishing to npmjs.com...' && np",
     "test": "jest",
     "version": "echo 'Executing npm publish hook: version... (rebuilds ./build)' && npm run build"
   },
@@ -26,6 +26,7 @@
   "license": "MIT",
   "dependencies": {
     "@eluvio/elv-js-helpers": "^6.1.0",
+    "my-awesome-greeter": "^1.0.2",
     "xstate": "^4.37.0"
   },
   "devDependencies": {
