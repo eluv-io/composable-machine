@@ -1,6 +1,6 @@
 {
   "name": "@eluvio/composable-machine",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Wrapper for xstate to allow machine composition",
   "homepage": "https://eluv-io.github.io/composable-machine",
   "main": "ComposableMachine.ts",
