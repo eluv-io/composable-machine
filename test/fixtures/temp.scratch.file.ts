@@ -1,6 +1,6 @@
 import { createMachine } from 'xstate'
 
-import { CreateMaster } from '../../src/CreateMaster'
+import { CreateMaster } from './CreateMaster'
 import { tgStateHasContext } from '../../src/types'
 
 const m = new CreateMaster()
