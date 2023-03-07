@@ -115,7 +115,7 @@ export class CreateContentObject extends ComposableMachine {
 
   defServices(): Record<string, CMServiceFunction> {
     return {
-      svc_CreateContentObject: this.svc_CreateContentObject
+      svc_CreateContentObject: this.svc_CreateContentObject.bind(this)
     }
   }
 

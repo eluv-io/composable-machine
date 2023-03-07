@@ -594,7 +594,7 @@ export class ComposableMachine {
   namespaceInvokeTransitionElementNonString(e: CMTransitionConfig): CMTransitionConfig {
     const result: CMTransitionConfig = {}
     if ('actions' in e && e.actions !== undefined) result.actions = this.namespaceActions(e.actions)
-    if ('target' in e && e.target !== undefined) result.target = this.namespaceStr(e.target)
+    if ('target' in e && e.target !== undefined) result.target = e.target
     return result
   }
 

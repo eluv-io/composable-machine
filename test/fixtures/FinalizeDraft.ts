@@ -113,7 +113,7 @@ export class FinalizeDraft extends ComposableMachine {
 
   defServices(): Record<string, CMServiceFunction> {
     return {
-      svc_FinalizeContentObject: this.svc_FinalizeContentObject
+      svc_FinalizeContentObject: this.svc_FinalizeContentObject.bind(this)
     }
   }
 
