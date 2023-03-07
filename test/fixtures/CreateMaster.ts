@@ -1,15 +1,17 @@
-import {ComposableMachine, IComposableMachineClass} from '../../src/ComposableMachine';
-import {CreateContentObject} from './CreateContentObject';
-import {FinalizeDraft} from './FinalizeDraft';
-import {TContextFieldDef, TMachineDefOrStateDef} from '../../src/types';
+import {
+  ComposableMachine,
+  IComposableMachineClass
+} from '../../src/ComposableMachine'
+import { CreateContentObject } from './CreateContentObject'
+import { FinalizeDraft } from './FinalizeDraft'
+import { CMContextFieldDef, CMMachineDefOrStateDef } from '../../src/types'
 
 export class CreateMaster extends ComposableMachine {
-
   act_BuildMetadata(): Function {
     const self = this
     return this.localAssign({
       masterMetadata: (context: object) => ({
-        public: {name: self.localContext(context, 'name')}
+        public: { name: self.localContext(context, 'name') }
       })
     })
   }
@@ -20,7 +22,7 @@ export class CreateMaster extends ComposableMachine {
     }
   }
 
-  defContext(): Record<string, TContextFieldDef> {
+  defContext(): Record<string, CMContextFieldDef> {
     return {
       commitMessage: {
         default: 'Create master',
@@ -42,11 +44,11 @@ export class CreateMaster extends ComposableMachine {
         type: String
       },
       masterObjectId: {
-        desc: 'New master\'s Object ID',
+        desc: "New master's Object ID",
         type: String
       },
       masterVersionHash: {
-        desc: 'New master\'s Version Hash',
+        desc: "New master's Version Hash",
         type: String
       },
       masterType: {
@@ -59,7 +61,7 @@ export class CreateMaster extends ComposableMachine {
         type: String
       },
       masterMetadata: {
-        default: {public:{name: 'Production Master'}},
+        default: { public: { name: 'Production Master' } },
         desc: 'Metadata to feed to master',
         type: Object
       },
@@ -79,7 +81,7 @@ export class CreateMaster extends ComposableMachine {
     }
   }
 
-  defMachine(): TMachineDefOrStateDef {
+  defMachine(): CMMachineDefOrStateDef {
     return {
       entry: 'act_BuildMetadata',
       states: {
@@ -135,7 +137,7 @@ export class CreateMaster extends ComposableMachine {
 
         ReadyToCreateMaster: {
           on: {
-            START: {target: 'CreatingMaster'}
+            START: { target: 'CreatingMaster' }
           }
         }
       },
@@ -147,5 +149,4 @@ export class CreateMaster extends ComposableMachine {
   defSuccessMessage(): string {
     return 'Master created and finalized.'
   }
-
 }

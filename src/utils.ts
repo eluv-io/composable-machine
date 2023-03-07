@@ -1,6 +1,6 @@
 const mapObjKeys = require('@eluvio/elv-js-helpers/Functional/mapObjKeys')
 
-import { TFoundSubmachine, TMachineDefOrStateDef } from './types'
+import { CMFoundSubmachine, CMMachineDefOrStateDef } from './types'
 
 // Default notifier (context._notifier)
 export const alertNotifier: Record<string, Function> = {
@@ -32,10 +32,10 @@ export const pathInParent2ObjectPath = (pathInParent: string[]): string[] =>
   pathInParent.map((k) => ['states', k]).flat()
 
 export const submachines = (
-  machineDef: TMachineDefOrStateDef,
+  machineDef: CMMachineDefOrStateDef,
   parentPath: string[] = []
-): TFoundSubmachine[] => {
-  let result: TFoundSubmachine[] = []
+): CMFoundSubmachine[] => {
+  let result: CMFoundSubmachine[] = []
   if (machineDef.states) {
     for (const [stateKey, stateDef] of Object.entries(machineDef.states)) {
       if (stateDef.states) {

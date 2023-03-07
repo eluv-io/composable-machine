@@ -1,11 +1,14 @@
-import {ComposableMachine} from '../../src/ComposableMachine'
-import {TContextFieldDef, TMachineDefOrStateDef, TxstateEvent} from '../../src/types'
+import { ComposableMachine } from '../../src/ComposableMachine'
+import {
+  CMContextFieldDef,
+  CMMachineDefOrStateDef,
+  XstateEvent
+} from '../../src/types'
 
 export class FinalizeDraft extends ComposableMachine {
-
   act_SaveVersionInfo(): Function {
     return this.localAssign({
-      versionHash: (_: object, event: TxstateEvent) => event.data?.hash
+      versionHash: (_: object, event: XstateEvent) => event.data?.hash
     })
   }
 
@@ -15,7 +18,7 @@ export class FinalizeDraft extends ComposableMachine {
     }
   }
 
-  defContext(): Record<string, TContextFieldDef> {
+  defContext(): Record<string, CMContextFieldDef> {
     return {
       commitMessage: {
         default: 'Finalize draft',
@@ -60,7 +63,7 @@ export class FinalizeDraft extends ComposableMachine {
     }
   }
 
-  defMachine(): TMachineDefOrStateDef {
+  defMachine(): CMMachineDefOrStateDef {
     return {
       states: {
         FinalizingDraft: {
@@ -69,7 +72,11 @@ export class FinalizeDraft extends ComposableMachine {
             onDone: [
               {
                 target: 'DraftFinalized',
-                actions: ['act_SaveVersionInfo', '_act_SaveSuccessToContext', '_act_NotifySuccess']
+                actions: [
+                  'act_SaveVersionInfo',
+                  '_act_SaveSuccessToContext',
+                  '_act_NotifySuccess'
+                ]
               }
             ],
             onError: [
@@ -88,13 +95,13 @@ export class FinalizeDraft extends ComposableMachine {
 
         DraftFinalizeErrored: {
           on: {
-            RETRY: {target: 'FinalizingDraft'}
+            RETRY: { target: 'FinalizingDraft' }
           }
         },
 
         ReadyToFinalizeDraft: {
           on: {
-            START: {target: 'FinalizingDraft'}
+            START: { target: 'FinalizingDraft' }
           }
         }
       },
@@ -121,9 +128,12 @@ export class FinalizeDraft extends ComposableMachine {
     const commitMessage = this.localContext(context, 'commitMessage')
 
     if (elvClient === undefined) throw Error('ElvClient not supplied')
-    if (libraryId === undefined || libraryId === '') throw Error('Library ID is required')
-    if (objectId === undefined || objectId === '') throw Error('Object ID is required')
-    if (writeToken === undefined || writeToken === '') throw Error('Write token is required')
+    if (libraryId === undefined || libraryId === '')
+      throw Error('Library ID is required')
+    if (objectId === undefined || objectId === '')
+      throw Error('Object ID is required')
+    if (writeToken === undefined || writeToken === '')
+      throw Error('Write token is required')
 
     return await elvClient.FinalizeContentObject({
       libraryId,

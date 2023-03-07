@@ -1,5 +1,6 @@
-import {CreateMaster} from './CreateMaster';
-import {tgStateHasContext} from "../../src/types";
+import { CreateMaster } from './CreateMaster'
+import { tgStateHasContext } from '../../src/types'
+import { createMachine } from 'xstate'
 
 const m = new CreateMaster()
 const def = m.def()
@@ -8,3 +9,4 @@ const def = m.def()
 if (tgStateHasContext(def)) {
   console.log(def.context['CreatingMaster.metadata'](def.context))
 }
+createMachine(def)

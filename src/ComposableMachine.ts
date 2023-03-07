@@ -21,14 +21,24 @@ import {
 } from './utils'
 
 import {
-  TConf,
-  TContextFieldDef,
-  TFieldMap,
-  TFoundSubmachine,
+  CMAction,
+  CMActions,
+  CMConf,
+  CMContextFieldDef,
+  CMFieldMap,
+  CMFoundSubmachine,
+  CMInvokeConfig,
+  CMMachineDefOrStateDef,
+  CMSubmachineMap,
+  CMTransition,
+  CMTransitionConfig,
+  CMTransitionElement,
+  StringOrStrArray,
   tgFieldHasDefault,
   tgFieldHasInitial,
   tgIsArray,
   tgIsFunction,
+  tgIsString,
   tgIsUndefined,
   tgMapHasInputs,
   tgStateHasAfter,
@@ -39,26 +49,21 @@ import {
   tgStateHasOn,
   tgStateHasOnDone,
   tgStateHasStates,
-  tgTransHasActions,
-  TInvokeDef,
-  TMachineDefOrStateDef, TStringOrStrArray,
-  TSubmachineMap,
-  TTransitionSpec,
-  TTransitionSpecOrArray, TxstateEvent,
-} from './types';
+  XstateEvent
+} from './types'
 
 import getPath from '@eluvio/elv-js-helpers/Functional/getPath'
 import setPath from '@eluvio/elv-js-helpers/Functional/setPath'
 
 export interface IComposableMachineClass {
-  new (pathInParent: string[], map: TSubmachineMap): ComposableMachine
+  new (pathInParent: string[], map: CMSubmachineMap): ComposableMachine
 }
 
 export class ComposableMachine {
-  map: TSubmachineMap // Defines input/output connections to parent machine (empty map for outermost machine).
+  map: CMSubmachineMap // Defines input/output connections to parent machine (empty map for outermost machine).
   pathInParent: string[] // Location in state hierarchy (empty array for outermost machine).
 
-  constructor(pathInParent: string[] = [], map: TSubmachineMap = {}) {
+  constructor(pathInParent: string[] = [], map: CMSubmachineMap = {}) {
     this.pathInParent = pathInParent
     this.map = map
     const localFieldnames = this.mergedContextFieldnames()
@@ -77,7 +82,7 @@ export class ComposableMachine {
   // Built-in action - log params to console
   _act_LogArgs(
     context: Record<string, any>,
-    event: TxstateEvent,
+    event: XstateEvent,
     meta: object
   ): void {
     console.debug(this.notificationPrefix())
@@ -86,7 +91,7 @@ export class ComposableMachine {
     console.debug(meta)
   }
 
-  _act_NotifyError(context: Record<string, any>, event: TxstateEvent): void {
+  _act_NotifyError(context: Record<string, any>, event: XstateEvent): void {
     this.localContext(context, '_notifier').error(
       this.notificationPrefix() + (event.data?.message || JSON.stringify(event))
     )
@@ -111,8 +116,8 @@ export class ComposableMachine {
   // Built-in action - save error to context
   _act_SaveErrorToContext(): Function {
     return this.localAssign({
-      _error: (_: object, event: TxstateEvent) => event.data,
-      _errorString: (_: object, event: TxstateEvent) =>
+      _error: (_: object, event: XstateEvent) => event.data,
+      _errorString: (_: object, event: XstateEvent) =>
         event.data?.message || `${event.data}`,
       _lastFailedAt: () => new Date()
     })
@@ -122,7 +127,7 @@ export class ComposableMachine {
   _act_SaveSuccessToContext(): Function {
     return this.localAssign({
       _lastSucceededAt: () => new Date(),
-      _result: (_: object, event: TxstateEvent) => event.data
+      _result: (_: object, event: XstateEvent) => event.data
     })
   }
 
@@ -141,7 +146,7 @@ export class ComposableMachine {
     }
   }
 
-  baseContext(): Record<string, TContextFieldDef> {
+  baseContext(): Record<string, CMContextFieldDef> {
     const self = this
     return {
       _createdAt: {
@@ -230,7 +235,7 @@ export class ComposableMachine {
 
   // Base class default input/output map
   // Default is to accept _logger and _notifier from parent
-  baseMap(): TSubmachineMap {
+  baseMap(): CMSubmachineMap {
     return {
       actions: {},
       context: {
@@ -254,8 +259,8 @@ export class ComposableMachine {
   }
 
   // Returns config (actions and services) to use as second argument for createMachine()
-  conf(): TConf {
-    let result: TConf = {
+  conf(): CMConf {
+    let result: CMConf = {
       actions: this.namespaceObjKeys(this.mergedActions()),
       services: this.namespaceObjKeys(this.mergedServices())
     }
@@ -282,7 +287,7 @@ export class ComposableMachine {
 
   // Returns definition to use as first argument for createMachine()
   // Do not override in subclasses - override template() and extend initialContext()
-  def(): TMachineDefOrStateDef {
+  def(): CMMachineDefOrStateDef {
     const self = this
     const parentFieldnames = this.mergedContextFieldnames()
     let result = this.defMachine()
@@ -324,7 +329,6 @@ export class ComposableMachine {
       )
 
       const submachineDef = submachineObj.def()
-      delete submachineDef.devTools
       delete submachineDef.id
       delete submachineDef.predictableActionArguments
 
@@ -353,7 +357,7 @@ export class ComposableMachine {
   }
 
   // Override in child classes
-  defContext(): Record<string, TContextFieldDef> {
+  defContext(): Record<string, CMContextFieldDef> {
     return {}
   }
 
@@ -370,7 +374,7 @@ export class ComposableMachine {
   // Overridden by child classes
   // Machine definition without initial context and auto-created fields.
   // States to be replaced by submachines are marked by setting metadata
-  defMachine(): TMachineDefOrStateDef {
+  defMachine(): CMMachineDefOrStateDef {
     return {}
   }
 
@@ -429,7 +433,7 @@ export class ComposableMachine {
   }
 
   // Returns merged context definitions - base class + subclass
-  mergedContextDef(): Record<string, TContextFieldDef> {
+  mergedContextDef(): Record<string, CMContextFieldDef> {
     return mergeRight(this.baseContext(), this.defContext())
   }
 
@@ -437,7 +441,7 @@ export class ComposableMachine {
     return Object.keys(this.mergedContextDef())
   }
 
-  mergedInitialFieldDefs(): Record<string, TContextFieldDef> {
+  mergedInitialFieldDefs(): Record<string, CMContextFieldDef> {
     return filterKV(
       (pair: TPair) => pair.snd().initial,
       this.mergedContextDef()
@@ -479,7 +483,7 @@ export class ComposableMachine {
   }
 
   // Returns entries from merged context definition that are marked input: true
-  mergedInputFieldDefs(): Record<string, TContextFieldDef> {
+  mergedInputFieldDefs(): Record<string, CMContextFieldDef> {
     return filterKV((pair: TPair) => pair.snd().input, this.mergedContextDef())
   }
 
@@ -489,7 +493,7 @@ export class ComposableMachine {
   }
 
   // Returns map.context.inputs from merged map (if this is a submachine - otherwise empty object)
-  mergedInputMap(): TFieldMap {
+  mergedInputMap(): CMFieldMap {
     return this.mergedMap().context?.inputs || {}
   }
 
@@ -502,7 +506,7 @@ export class ComposableMachine {
 
   // Returns merged map - base class + subclass
   // (but only if submachine, otherwise empty map)
-  mergedMap(): TSubmachineMap {
+  mergedMap(): CMSubmachineMap {
     return this.isSubmachine()
       ? {
           actions: mergeRight(
@@ -549,31 +553,36 @@ export class ComposableMachine {
     return this.pathInParent.join('.')
   }
 
-  namespaceInvokeDef(i: TInvokeDef): TInvokeDef {
-    return {
-      src: this.namespaceStr(i.src),
-      onDone: this.namespaceTransitionSpecOrArray(i.onDone),
-      onError: this.namespaceTransitionSpecOrArray(i.onError)
-    }
+  namespaceAction(a: CMAction): CMAction {
+    return this.namespaceStr(a)
+  }
+
+  namespaceActions(a: CMActions): CMActions {
+    return tgIsArray(a)
+      ? a.map(this.namespaceAction.bind(this))
+      : this.namespaceAction(a)
+  }
+
+  namespaceInvokeDef(i: CMInvokeConfig): CMInvokeConfig {
+    const result: CMInvokeConfig = {src: this.namespaceStr(i.src)}
+    if ("onDone" in i && i.onDone !== undefined) result.onDone = this.namespaceTransition(i.onDone)
+    if ("onError" in i && i.onError !== undefined) result.onError = this.namespaceTransition(i.onError)
+    return result
   }
 
   namespaceObjKeys<T>(obj: Record<string, T>): Record<string, T> {
     return namespaceKeys(this.namespace(), obj)
   }
 
-  namespaceRefs(d: TMachineDefOrStateDef): TMachineDefOrStateDef {
+  namespaceRefs(d: CMMachineDefOrStateDef): CMMachineDefOrStateDef {
     if (tgStateHasAfter(d))
-      d.after = mapObjValues(
-        this.namespaceTransitionSpecOrArray.bind(this),
-        d.after
-      )
+      d.after = mapObjValues(this.namespaceTransition.bind(this), d.after)
     if (tgStateHasEntry(d)) d.entry = this.namespaceStrOrArray(d.entry)
     if (tgStateHasExit(d)) d.exit = this.namespaceStrOrArray(d.exit)
     if (tgStateHasInvoke(d)) d.invoke = this.namespaceInvokeDef(d.invoke)
     if (tgStateHasOn(d))
-      d.on = mapObjValues(this.namespaceTransitionSpecOrArray.bind(this), d.on)
-    if (tgStateHasOnDone(d))
-      d.onDone = this.namespaceTransitionSpecOrArray(d.onDone)
+      d.on = mapObjValues(this.namespaceTransition.bind(this), d.on)
+    if (tgStateHasOnDone(d)) d.onDone = this.namespaceTransition(d.onDone)
     if (tgStateHasStates(d))
       d.states = mapObjValues(this.namespaceRefs.bind(this), d.states)
     return d
@@ -585,7 +594,7 @@ export class ComposableMachine {
   }
 
   // Prepend namespace to string or each string in an array using dot notation
-  namespaceStrOrArray(x: TStringOrStrArray): TStringOrStrArray {
+  namespaceStrOrArray(x: StringOrStrArray): StringOrStrArray {
     if (tgIsArray(x)) {
       return x.map(this.namespaceStr.bind(this))
     } else {
@@ -594,23 +603,45 @@ export class ComposableMachine {
   }
 
   // Prepend namespace to action name(s) if present
-  namespaceTransitionSpec(t: TTransitionSpec): TTransitionSpec {
-    if (tgTransHasActions(t)) {
-      t.actions = this.namespaceStrOrArray(t.actions)
+  // CMTransition could be singular or array
+  // Elements could be strings or CMTransitionConfig
+  namespaceTransition(t: CMTransition): CMTransition {
+    return tgIsArray(t)
+      ? t.map(this.namespaceTransitionElement.bind(this))
+      : this.namespaceTransitionElement(t)
+  }
+
+  namespaceTransitionConfig(t: CMTransitionConfig): CMTransitionConfig {
+    if (t.actions !== undefined) {
+      t.actions = this.namespaceActions(t.actions)
     }
     return t
   }
 
-  // Prepend namespace to action name(s) if present for 1 spec or for each spec in an array
-  namespaceTransitionSpecOrArray(
-    t: TTransitionSpecOrArray
-  ): TTransitionSpecOrArray {
-    if (tgIsArray(t)) {
-      return t.map(this.namespaceTransitionSpec.bind(this))
-    } else {
-      return this.namespaceTransitionSpec(t)
-    }
+  // Prepend namespace to action name(s) if present
+  // CMTransitionElement could be a string or CMTransitionConfig
+  namespaceTransitionElement(t: CMTransitionElement): CMTransitionElement {
+    return tgIsString(t)
+      ? this.namespaceStr(t)
+      : this.namespaceTransitionConfig(t)
   }
+
+  // Prepend namespace to action name(s) if present
+  // namespaceTransitionSpec(t: TransitionSpec): TransitionSpec {
+  //   if (tgTransHasActions(t)) {
+  //     t.actions = this.namespaceStrOrArray(t.actions)
+  //   }
+  //   return t
+  // }
+
+  // Prepend namespace to action name(s) if present for 1 spec or for each spec in an array
+  // namespaceTransitionSpecOrArray(t: CMTransition): CMTransition {
+  //   if (tgIsArray(t)) {
+  //     return t.map(this.namespaceTransition.bind(this))
+  //   } else {
+  //     return this.namespaceTransition(t)
+  //   }
+  // }
 
   // If submachine, return path to machine in dot notation, plus ': '
   // If we are top level machine, return class name plus ': '
@@ -641,7 +672,7 @@ export class ComposableMachine {
   }
 
   // Prepend parent's namespace to string or each string in an array using dot notation
-  parentNamespaceStrOrArray(x: TStringOrStrArray): TStringOrStrArray {
+  parentNamespaceStrOrArray(x: StringOrStrArray): StringOrStrArray {
     if (tgIsArray(x)) {
       return x.map(this.parentNamespaceStr.bind(this))
     } else {
@@ -650,23 +681,23 @@ export class ComposableMachine {
   }
 
   // Prepend parent's namespace to action name(s) if present
-  parentNamespaceTransitionSpec(t: TTransitionSpec): TTransitionSpec {
-    if (tgTransHasActions(t)) {
-      t.actions = this.parentNamespaceStrOrArray(t.actions)
-    }
-    return t
-  }
+  // parentNamespaceTransitionSpec(t: TransitionSpec): TransitionSpec {
+  //   if (tgTransHasActions(t)) {
+  //     t.actions = this.parentNamespaceStrOrArray(t.actions)
+  //   }
+  //   return t
+  // }
 
   // Prepend parent's namespace to action name(s) if present for 1 spec or for each spec in an array
-  parentNamespaceTransitionSpecOrArray(
-    t: TTransitionSpecOrArray
-  ): TTransitionSpecOrArray {
-    if (tgIsArray(t)) {
-      return t.map(this.parentNamespaceTransitionSpec.bind(this))
-    } else {
-      return this.parentNamespaceTransitionSpec(t)
-    }
-  }
+  // parentNamespaceTransitionSpecOrArray(
+  //   t: TransitionSpecOrArray
+  // ): TransitionSpecOrArray {
+  //   if (tgIsArray(t)) {
+  //     return t.map(this.parentNamespaceTransitionSpec.bind(this))
+  //   } else {
+  //     return this.parentNamespaceTransitionSpec(t)
+  //   }
+  // }
 
   // Process the argument to the assign() function to make relative to local context
   remapAssignments(assignments: Record<string, any>): Record<string, any> {
@@ -732,7 +763,7 @@ export class ComposableMachine {
     return tgIsFunction(val) ? val(context) : context[namespacedFieldname]
   }
 
-  submachineStates(): TFoundSubmachine[] {
+  submachineStates(): CMFoundSubmachine[] {
     return submachines(this.defMachine())
   }
 }

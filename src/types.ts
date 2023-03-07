@@ -1,14 +1,21 @@
 import isArray from '@eluvio/elv-js-helpers/Boolean/isArray'
 import isFunction from '@eluvio/elv-js-helpers/Boolean/isFunction'
+import isString from '@eluvio/elv-js-helpers/Boolean/isString'
 import isUndefined from '@eluvio/elv-js-helpers/Boolean/isUndefined'
 import objHasKey from '@eluvio/elv-js-helpers/Boolean/objHasKey'
+import { SingleOrArray } from 'xstate'
 
-export type TConf = {
+// Define type that is narrower than corresponding xstate type
+// Actions must be strings, no inline functions
+export type CMAction = string
+export type CMActions = SingleOrArray<CMAction>
+
+export type CMConf = {
   actions: Record<string, Function>
   services: Record<string, Function>
 }
 
-export type TContextFieldDef = {
+export type CMContextFieldDef = {
   default?: any
   desc: string
   input?: boolean
@@ -18,84 +25,101 @@ export type TContextFieldDef = {
   unserializable?: boolean
 }
 
-export type TContextFieldDefWithDefault = Omit<TContextFieldDef, 'default'> & {
+export type CMContextFieldDefWithDefault = Omit<
+  CMContextFieldDef,
+  'default'
+> & {
   default: any
 }
 
-export type TContextFieldDefWithInitial = Omit<TContextFieldDef, 'initial'> & {
+export type CMContextFieldDefWithInitial = Omit<
+  CMContextFieldDef,
+  'initial'
+> & {
   initial: any
 }
 
-export type TFieldMap = Record<string, string>
+export type CMFieldMap = Record<string, string>
 
-export type TFoundSubmachine = {
+export type CMFoundSubmachine = {
   path: string[]
   submachine: string
-  map?: TSubmachineMap
+  map?: CMSubmachineMap
 }
 
-export type TInvokeDef = {
+// Define type that is wider than corresponding xstate type
+// Create a generic context type
+export type CMGenericContext = Record<string, any>
+
+export type CMTransition =
+  | CMTransitionTarget
+  | SingleOrArray<CMTransitionConfig | string>
+
+export type CMTransitionConfig = {
+  actions?: CMActions
+  target?: CMTransitionTarget
+}
+
+export type CMTransitionElement = string | CMTransitionConfig
+
+// Define type that is narrower than corresponding xstate type
+// Targets must be strings, no inline machine definitions
+export type CMTransitionTarget = SingleOrArray<string>
+
+export type CMInvokeConfig = {
   src: string
-  onDone: TTransitionSpecOrArray
-  onError: TTransitionSpecOrArray
+  onDone?: CMTransition
+  onError?: CMTransition
 }
 
-export type TMachineDefOrStateDef = {
-  after?: Record<string, TTransitionSpecOrArray>
-  context?: Record<string, any>
+// MachineConfig
+export type CMMachineDefOrStateDef = {
+  after?: Record<string, CMTransition>
+  context?: CMGenericContext
   description?: string
-  devTools?: boolean
-  entry?: TStringOrStrArray
-  exit?: TStringOrStrArray
+  entry?: CMActions
+  exit?: CMActions
   id?: string
   initial?: string
-  invoke?: TInvokeDef
-  meta?: TStateMeta
-  on?: Record<string, TTransitionSpecOrArray>
-  onDone?: TTransitionSpecOrArray
+  invoke?: CMInvokeConfig
+  meta?: CMStateMeta
+  on?: Record<string, CMTransition>
+  onDone?: CMTransition
   predictableActionArguments?: boolean
-  states?: Record<string, TMachineDefOrStateDef>
+  states?: Record<string, CMMachineDefOrStateDef>
   type?: 'final' | 'atomic' | 'compound' | 'parallel' | 'history' | undefined
 }
 
-export type TMachineDefOrStateDefWithContext = Omit<
-  TMachineDefOrStateDef,
+export type CMMachineDefOrStateDefWithContext = Omit<
+  CMMachineDefOrStateDef,
   'context'
-> & { context: Record<string, any> }
+> & { context: CMGenericContext }
 
-export type TStateMeta = {
+export type CMStateMeta = {
   submachine?: string
-  map?: TSubmachineMap
+  map?: CMSubmachineMap
 }
 
-export type TStringOrStrArray = string | string[]
+export type StringOrStrArray = string | string[]
 
-export type TSubmachineMap = {
+export type CMSubmachineMap = {
   actions?: Record<string, string>
   context?: {
-    inputs?: TFieldMap
-    outputs?: TFieldMap
+    inputs?: CMFieldMap
+    outputs?: CMFieldMap
   }
 }
 
-export type TSubmachineMapWithInputs = {
+export type SubmachineMapWithInputs = {
   actions?: Record<string, string>
   context: {
-    inputs: TFieldMap
-    outputs?: TFieldMap
+    inputs: CMFieldMap
+    outputs?: CMFieldMap
   }
 }
 
-export type TTransitionSpec = {
-  actions?: TStringOrStrArray
-  cond?: Function
-  target?: string
-}
-
-export type TTransitionSpecOrArray = TTransitionSpec | TTransitionSpec[]
-
-export type TxstateEvent = {
-  data?: Record<string,any>
+export type XstateEvent = {
+  data?: Record<string, any>
 }
 
 // ======================================================
@@ -106,52 +130,52 @@ export type TxstateEvent = {
 export const tgIsArray = (val: any): val is Array<any> => Boolean(isArray(val))
 export const tgIsFunction = (val: any): val is Function =>
   Boolean(isFunction(val))
+export const tgIsString = (val: any): val is String => Boolean(isString(val))
 export const tgIsUndefined = (val: any): val is undefined =>
   Boolean(isUndefined(val))
 
 // machine schema types
 
 export const tgFieldHasDefault = (
-  val: TContextFieldDef
-): val is TContextFieldDefWithDefault => Boolean(objHasKey('default', val))
+  val: CMContextFieldDef
+): val is CMContextFieldDefWithDefault => Boolean(objHasKey('default', val))
 export const tgFieldHasInitial = (
-  val: TContextFieldDef
-): val is TContextFieldDefWithInitial => Boolean(objHasKey('initial', val))
+  val: CMContextFieldDef
+): val is CMContextFieldDefWithInitial => Boolean(objHasKey('initial', val))
 
 export const tgMapHasInputs = (
-  val: TSubmachineMap
-): val is TSubmachineMapWithInputs =>
+  val: CMSubmachineMap
+): val is SubmachineMapWithInputs =>
   Boolean(objHasKey('context', val) && objHasKey('inputs', val.context))
 
 export const tgStateHasAfter = (
-  val: TMachineDefOrStateDef
-): val is { after: Record<string, TTransitionSpecOrArray> } =>
+  val: CMMachineDefOrStateDef
+): val is { after: Record<string, CMTransition> } =>
   Boolean(objHasKey('after', val))
 export const tgStateHasContext = (
-  val: TMachineDefOrStateDef
-): val is TMachineDefOrStateDefWithContext => Boolean(objHasKey('context', val))
+  val: CMMachineDefOrStateDef
+): val is CMMachineDefOrStateDefWithContext =>
+  Boolean(objHasKey('context', val))
 export const tgStateHasEntry = (
-  val: TMachineDefOrStateDef
-): val is { entry: TStringOrStrArray } => Boolean(objHasKey('entry', val))
+  val: CMMachineDefOrStateDef
+): val is { entry: CMActions } => Boolean(objHasKey('entry', val))
 export const tgStateHasExit = (
-  val: TMachineDefOrStateDef
-): val is { exit: TStringOrStrArray } => Boolean(objHasKey('exit', val))
+  val: CMMachineDefOrStateDef
+): val is { exit: CMActions } => Boolean(objHasKey('exit', val))
 export const tgStateHasInvoke = (
-  val: TMachineDefOrStateDef
-): val is { invoke: TInvokeDef } => Boolean(objHasKey('invoke', val))
+  val: CMMachineDefOrStateDef
+): val is { invoke: CMInvokeConfig } => Boolean(objHasKey('invoke', val))
 export const tgStateHasOn = (
-  val: TMachineDefOrStateDef
-): val is { on: Record<string, TTransitionSpecOrArray> } =>
-  Boolean(objHasKey('on', val))
+  val: CMMachineDefOrStateDef
+): val is { on: Record<string, CMTransition> } => Boolean(objHasKey('on', val))
 export const tgStateHasOnDone = (
-  val: TMachineDefOrStateDef
-): val is { onDone: TTransitionSpecOrArray } =>
-  Boolean(objHasKey('onDone', val))
+  val: CMMachineDefOrStateDef
+): val is { onDone: CMTransition } => Boolean(objHasKey('onDone', val))
 export const tgStateHasStates = (
-  val: TMachineDefOrStateDef
-): val is { states: Record<string, TMachineDefOrStateDef> } =>
+  val: CMMachineDefOrStateDef
+): val is { states: Record<string, CMMachineDefOrStateDef> } =>
   Boolean(objHasKey('states', val))
 
 export const tgTransHasActions = (
-  val: TTransitionSpec
-): val is { actions: TStringOrStrArray } => Boolean(objHasKey('actions', val))
+  val: CMTransitionElement
+): val is { actions: CMActions } => Boolean(objHasKey('actions', val))

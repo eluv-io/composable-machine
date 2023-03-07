@@ -1,13 +1,16 @@
-import {ComposableMachine} from '../../src/ComposableMachine';
-import {TContextFieldDef, TMachineDefOrStateDef, TxstateEvent} from '../../src/types';
+import { ComposableMachine } from '../../src/ComposableMachine'
+import {
+  CMContextFieldDef,
+  CMMachineDefOrStateDef,
+  XstateEvent
+} from '../../src/types'
 
 export class CreateContentObject extends ComposableMachine {
-
   act_SaveDraftInfo(): Function {
     return this.localAssign({
-      writeToken: (_: object, event: TxstateEvent) => event.data?.writeToken,
-      objectId: (_: object, event: TxstateEvent) => event.data?.objectId,
-      nodeUrl: (_: object, event: TxstateEvent) => event.data?.nodeUrl
+      writeToken: (_: object, event: XstateEvent) => event.data?.writeToken,
+      objectId: (_: object, event: XstateEvent) => event.data?.objectId,
+      nodeUrl: (_: object, event: XstateEvent) => event.data?.nodeUrl
     })
   }
 
@@ -17,7 +20,7 @@ export class CreateContentObject extends ComposableMachine {
     }
   }
 
-  defContext(): Record<string, TContextFieldDef> {
+  defContext(): Record<string, CMContextFieldDef> {
     return {
       contentType: {
         desc: 'Content type to use for new object',
@@ -59,7 +62,7 @@ export class CreateContentObject extends ComposableMachine {
     }
   }
 
-  defMachine(): TMachineDefOrStateDef {
+  defMachine(): CMMachineDefOrStateDef {
     // createMachine({
     /** @xstate-layout N4IgpgJg5mDOIC5QAoC2BDAxgCwJYDswBKAOgGEAnMdAFwKgHkAjAKzExoGIIB7QkggDceAazAlMVWmGZsOAbQAMAXUSgADj1i46fNSAAeiAOwBmEqYBsAJmuWAjJYCsigCwBOU08sAaEAE9EAFpXSwtXe3dLKIAOay8nd3cnAF8UvzQsPEJSSmo6fEZWdi4wCgoeChJ1ABtaADNK1AkpGhlihRV9TW1dfH0jBFNFaxJ3Y2jTeydp40UY+z9AhBDFEg8na1dXKbtjGJivNIyMHAJiElkSvOkAUXLKyE4AJVuAFWeATSVVJBAenS4PR-QYzUbuew7ewxGwxdx2RYBYLuVwkBb2WzOeZOBY7Y4gTJnHIkZ7UCD+N48G5tK4cTgAZTeAEFnm8ft0tIDgaBBkkSIp3HDFJZjDjTO55ktgvF3BZLPK5qLTGYRml0iB8DwIHB9ITssQOb0gf0QYhrE45ZjHC4PF5nFKVuLzJYRpZlVE3Iopvi9edcq16LSaIauSaeYgoiQZklIt5bBE3Q6go5ZS7oS7kpYhZYfad9aQg9TICG+gNEDFUa5hW7jKFXE4pvZjA7zWNtpE7BWhaFjLmsn7Lh0aEX7hUqBAS8ay0NlSRrBjFBNYvsvc2kQgtnPbPZ7FNXKL516c+rfcTSehyZSi0HJ9zDIh7IoLdEPTZIQ2d2vlkFhmFH3YnCrYwtjiZI1RSIA */
     return {
@@ -70,7 +73,11 @@ export class CreateContentObject extends ComposableMachine {
             onDone: [
               {
                 target: 'ObjectCreated',
-                actions: ['act_SaveDraftInfo', '_act_SaveSuccessToContext', '_act_NotifySuccess']
+                actions: [
+                  'act_SaveDraftInfo',
+                  '_act_SaveSuccessToContext',
+                  '_act_NotifySuccess'
+                ]
               }
             ],
             onError: [
@@ -89,13 +96,13 @@ export class CreateContentObject extends ComposableMachine {
 
         ObjectCreateErrored: {
           on: {
-            RETRY: {target: 'CreatingObject'}
+            RETRY: { target: 'CreatingObject' }
           }
         },
 
         ReadyToCreateObject: {
           on: {
-            START: {target: 'CreatingObject'}
+            START: { target: 'CreatingObject' }
           }
         }
       },
@@ -120,8 +127,10 @@ export class CreateContentObject extends ComposableMachine {
     const libraryId = this.localContext(context, 'libraryId')
     const type = this.localContext(context, 'contentType')
     const metadata = this.localContext(context, 'metadata')
-    if (libraryId === undefined || libraryId === '') throw Error(`${this.notificationPrefix()}Library ID is required`)
-    if (elvClient === undefined) throw Error(`${this.notificationPrefix()}ElvClient not supplied`)
+    if (libraryId === undefined || libraryId === '')
+      throw Error(`${this.notificationPrefix()}Library ID is required`)
+    if (elvClient === undefined)
+      throw Error(`${this.notificationPrefix()}ElvClient not supplied`)
     return await elvClient.CreateContentObject({
       libraryId,
       options: {

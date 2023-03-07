@@ -1,13 +1,13 @@
 {
   "name": "@eluvio/composable-machine",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Wrapper for xstate to allow machine composition",
   "homepage": "https://eluv-io.github.io/composable-machine",
   "main": "ComposableMachine.ts",
   "types": "ComposableMachine.d.ts",
   "scripts": {
     "build": "rimraf ./build && mkdir build && cp package.json ./build/ && cp LICENSE ./build/ && tsc",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "tslint -p tsconfig.json",
     "release": "echo 'Incrementing version and publishing to npmjs.com...' && np",
     "test": "jest",

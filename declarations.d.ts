@@ -54,6 +54,12 @@ declare module '@eluvio/elv-js-helpers/Boolean/isObject' {
   export = isObject
 }
 
+declare module '@eluvio/elv-js-helpers/Boolean/isString' {
+  function isString(x: any): Boolean
+
+  export = isString
+}
+
 declare module '@eluvio/elv-js-helpers/Boolean/isUndefined' {
   function isUndefined(x: any): Boolean
 
