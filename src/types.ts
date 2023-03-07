@@ -3,16 +3,23 @@ import isFunction from '@eluvio/elv-js-helpers/Boolean/isFunction'
 import isString from '@eluvio/elv-js-helpers/Boolean/isString'
 import isUndefined from '@eluvio/elv-js-helpers/Boolean/isUndefined'
 import objHasKey from '@eluvio/elv-js-helpers/Boolean/objHasKey'
-import { SingleOrArray } from 'xstate'
+import { ActionMeta, AnyEventObject, InvokeMeta, SingleOrArray } from "xstate";
 
 // Define type that is narrower than corresponding xstate type
 // Actions must be strings, no inline functions
 export type CMAction = string
 export type CMActions = SingleOrArray<CMAction>
 
+export type CMActionFunction = (context: CMGenericContext, event: AnyEventObject, meta: ActionMeta<CMGenericContext, AnyEventObject>) => void
+export type CMServiceFunction = (
+  context: CMGenericContext,
+  event: AnyEventObject,
+  meta: InvokeMeta
+) => PromiseLike<any>
+
 export type CMConf = {
-  actions: Record<string, Function>
-  services: Record<string, Function>
+  actions: Record<string, CMActionFunction>
+  services: Record<string, CMServiceFunction>
 }
 
 export type CMContextFieldDef = {
@@ -51,26 +58,14 @@ export type CMFoundSubmachine = {
 // Create a generic context type
 export type CMGenericContext = Record<string, any>
 
-export type CMTransition =
-  | CMTransitionTarget
-  | SingleOrArray<CMTransitionConfig | string>
-
-export type CMTransitionConfig = {
-  actions?: CMActions
-  target?: CMTransitionTarget
-}
-
-export type CMTransitionElement = string | CMTransitionConfig
-
-// Define type that is narrower than corresponding xstate type
-// Targets must be strings, no inline machine definitions
-export type CMTransitionTarget = SingleOrArray<string>
-
 export type CMInvokeConfig = {
   src: string
-  onDone?: CMTransition
-  onError?: CMTransition
+  onDone?: CMInvokeTransition
+  onError?: CMInvokeTransition
 }
+
+export type CMInvokeTransition = string | SingleOrArray<CMTransitionConfig>
+
 
 // MachineConfig
 export type CMMachineDefOrStateDef = {
@@ -100,8 +95,6 @@ export type CMStateMeta = {
   map?: CMSubmachineMap
 }
 
-export type StringOrStrArray = string | string[]
-
 export type CMSubmachineMap = {
   actions?: Record<string, string>
   context?: {
@@ -110,13 +103,31 @@ export type CMSubmachineMap = {
   }
 }
 
-export type SubmachineMapWithInputs = {
+export type CMSubmachineMapWithInputs = {
   actions?: Record<string, string>
   context: {
     inputs: CMFieldMap
     outputs?: CMFieldMap
   }
 }
+
+export type CMTransition =
+  | CMTransitionTarget
+  | SingleOrArray<CMTransitionConfig>
+
+
+export type CMTransitionConfig = {
+  actions?: CMActions
+  target?: CMTransitionTarget
+}
+
+export type CMTransitionElement = string | CMTransitionConfig
+
+// Define type that is narrower than corresponding xstate type
+// Targets must be strings, no inline machine definitions
+export type CMTransitionTarget = string
+
+export type StringOrStrArray = string | string[]
 
 export type XstateEvent = {
   data?: Record<string, any>
@@ -145,7 +156,7 @@ export const tgFieldHasInitial = (
 
 export const tgMapHasInputs = (
   val: CMSubmachineMap
-): val is SubmachineMapWithInputs =>
+): val is CMSubmachineMapWithInputs =>
   Boolean(objHasKey('context', val) && objHasKey('inputs', val.context))
 
 export const tgStateHasAfter = (

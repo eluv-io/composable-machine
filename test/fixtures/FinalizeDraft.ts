@@ -1,18 +1,19 @@
 import { ComposableMachine } from '../../src/ComposableMachine'
 import {
+  CMActionFunction,
   CMContextFieldDef,
-  CMMachineDefOrStateDef,
+  CMMachineDefOrStateDef, CMServiceFunction,
   XstateEvent
-} from '../../src/types'
+} from "../../src/types";
 
 export class FinalizeDraft extends ComposableMachine {
-  act_SaveVersionInfo(): Function {
+  act_SaveVersionInfo(): CMActionFunction {
     return this.localAssign({
       versionHash: (_: object, event: XstateEvent) => event.data?.hash
     })
   }
 
-  defActions(): Record<string, Function> {
+  defActions(): Record<string, CMActionFunction> {
     return {
       act_SaveVersionInfo: this.act_SaveVersionInfo()
     }
@@ -110,7 +111,7 @@ export class FinalizeDraft extends ComposableMachine {
     }
   }
 
-  defServices(): Record<string, Function> {
+  defServices(): Record<string, CMServiceFunction> {
     return {
       svc_FinalizeContentObject: this.svc_FinalizeContentObject
     }

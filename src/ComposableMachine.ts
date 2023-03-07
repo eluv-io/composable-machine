@@ -4,7 +4,7 @@
 // TODO: runtime validators
 // TODO: abbreviated namespaces
 
-import { assign } from 'xstate'
+import { ActionMeta, AnyEventObject, assign } from "xstate";
 
 import filterKV from '@eluvio/elv-js-helpers/Functional/filterKV'
 import mergeRight from '@eluvio/elv-js-helpers/Functional/mergeRight'
@@ -21,14 +21,14 @@ import {
 } from './utils'
 
 import {
-  CMAction,
+  CMAction, CMActionFunction,
   CMActions,
   CMConf,
   CMContextFieldDef,
   CMFieldMap,
-  CMFoundSubmachine,
-  CMInvokeConfig,
-  CMMachineDefOrStateDef,
+  CMFoundSubmachine, CMGenericContext,
+  CMInvokeConfig, CMInvokeTransition,
+  CMMachineDefOrStateDef, CMServiceFunction,
   CMSubmachineMap,
   CMTransition,
   CMTransitionConfig,
@@ -50,7 +50,7 @@ import {
   tgStateHasOnDone,
   tgStateHasStates,
   XstateEvent
-} from './types'
+} from "./types";
 
 import getPath from '@eluvio/elv-js-helpers/Functional/getPath'
 import setPath from '@eluvio/elv-js-helpers/Functional/setPath'
@@ -81,9 +81,9 @@ export class ComposableMachine {
 
   // Built-in action - log params to console
   _act_LogArgs(
-    context: Record<string, any>,
-    event: XstateEvent,
-    meta: object
+    context: CMGenericContext,
+    event: AnyEventObject,
+    meta: ActionMeta<CMGenericContext, AnyEventObject>
   ): void {
     console.debug(this.notificationPrefix())
     console.debug(context)
@@ -91,20 +91,23 @@ export class ComposableMachine {
     console.debug(meta)
   }
 
-  _act_NotifyError(context: Record<string, any>, event: XstateEvent): void {
+  _act_NotifyError(    context: CMGenericContext,
+                       event: AnyEventObject
+  ): void {
     this.localContext(context, '_notifier').error(
       this.notificationPrefix() + (event.data?.message || JSON.stringify(event))
     )
   }
 
-  _act_NotifySuccess(context: Record<string, any>): void {
+  _act_NotifySuccess(    context: CMGenericContext
+  ): void {
     this.localContext(context, '_notifier').success(
       this.notificationPrefix() + this.defSuccessMessage()
     )
   }
 
   // Built-in action - record activation of machine/submachine to context
-  _act_SaveEntryToContext(): Function {
+  _act_SaveEntryToContext(): CMActionFunction {
     const self = this
     return this.localAssign({
       _firstEnteredAt: (context: object) =>
@@ -114,7 +117,7 @@ export class ComposableMachine {
   }
 
   // Built-in action - save error to context
-  _act_SaveErrorToContext(): Function {
+  _act_SaveErrorToContext(): CMActionFunction {
     return this.localAssign({
       _error: (_: object, event: XstateEvent) => event.data,
       _errorString: (_: object, event: XstateEvent) =>
@@ -124,7 +127,7 @@ export class ComposableMachine {
   }
 
   // Built-in action - save success to context
-  _act_SaveSuccessToContext(): Function {
+  _act_SaveSuccessToContext(): CMActionFunction {
     return this.localAssign({
       _lastSucceededAt: () => new Date(),
       _result: (_: object, event: XstateEvent) => event.data
@@ -134,7 +137,7 @@ export class ComposableMachine {
   _act_ValidateInputs(): void {}
 
   // Base class built-in actions
-  baseActions(): Record<string, Function> {
+  baseActions(): Record<string, CMActionFunction> {
     return {
       _act_LogArgs: this._act_LogArgs,
       _act_NotifyError: this._act_NotifyError,
@@ -248,7 +251,7 @@ export class ComposableMachine {
     }
   }
 
-  baseServices(): Record<string, Function> {
+  baseServices(): Record<string, CMServiceFunction> {
     return {}
   }
 
@@ -352,7 +355,7 @@ export class ComposableMachine {
   }
 
   // Override in child classes
-  defActions(): Record<string, Function> {
+  defActions(): Record<string, CMActionFunction> {
     return {}
   }
 
@@ -390,7 +393,7 @@ export class ComposableMachine {
   }
 
   // Override in child classes
-  defServices(): Record<string, Function> {
+  defServices(): Record<string, CMServiceFunction> {
     return {}
   }
 
@@ -403,7 +406,7 @@ export class ComposableMachine {
     return this.pathInParent.length !== 0
   }
 
-  localAssign(assignments: object): Function {
+  localAssign(assignments: object): CMActionFunction {
     const definedInputs = this.mergedInputFieldnames()
     for (const fieldName of Object.keys(assignments)) {
       if (definedInputs.includes(fieldName))
@@ -428,7 +431,7 @@ export class ComposableMachine {
   }
 
   // Returns merged actions - base class + subclass
-  mergedActions(): Record<string, Function> {
+  mergedActions(): Record<string, CMActionFunction> {
     return mergeRight(this.baseActions(), this.defActions())
   }
 
@@ -535,7 +538,7 @@ export class ComposableMachine {
 
   // Returns merged services - base class + subclass
   // (currently the base class has no built-in services)
-  mergedServices(): Record<string, Function> {
+  mergedServices(): Record<string, CMServiceFunction> {
     return mergeRight(this.baseServices(), this.defServices())
   }
 
@@ -565,10 +568,36 @@ export class ComposableMachine {
 
   namespaceInvokeDef(i: CMInvokeConfig): CMInvokeConfig {
     const result: CMInvokeConfig = {src: this.namespaceStr(i.src)}
-    if ("onDone" in i && i.onDone !== undefined) result.onDone = this.namespaceTransition(i.onDone)
-    if ("onError" in i && i.onError !== undefined) result.onError = this.namespaceTransition(i.onError)
+    if ("onDone" in i && i.onDone !== undefined) result.onDone = this.namespaceInvokeTransition(i.onDone)
+    if ("onError" in i && i.onError !== undefined) result.onError = this.namespaceInvokeTransition(i.onError)
     return result
   }
+
+  // Prepend namespace to action name(s) if present
+  // Similar to namespaceTransition except transition cannot be a string array
+  namespaceInvokeTransition(t: CMInvokeTransition): CMInvokeTransition {
+    if (tgIsArray(t)) {
+      return t.map(this.namespaceInvokeTransitionElementNonString.bind(this))
+    } else {
+      return this.namespaceInvokeTransitionElement(t)
+    }
+  }
+
+  namespaceInvokeTransitionElement(e: CMTransitionConfig | string): CMTransitionConfig | string {
+    if (typeof e === "string") {
+      return this.namespaceStr(e)
+    } else {
+      return this.namespaceInvokeTransitionElementNonString(e)
+    }
+  }
+
+  namespaceInvokeTransitionElementNonString(e: CMTransitionConfig): CMTransitionConfig {
+    const result: CMTransitionConfig = {}
+    if ('actions' in e && e.actions !== undefined) result.actions = this.namespaceActions(e.actions)
+    if ('target' in e && e.target !== undefined) result.target = this.namespaceStr(e.target)
+    return result
+  }
+
 
   namespaceObjKeys<T>(obj: Record<string, T>): Record<string, T> {
     return namespaceKeys(this.namespace(), obj)
@@ -602,13 +631,17 @@ export class ComposableMachine {
     }
   }
 
+
+
   // Prepend namespace to action name(s) if present
   // CMTransition could be singular or array
   // Elements could be strings or CMTransitionConfig
   namespaceTransition(t: CMTransition): CMTransition {
-    return tgIsArray(t)
-      ? t.map(this.namespaceTransitionElement.bind(this))
-      : this.namespaceTransitionElement(t)
+    if (tgIsArray(t)) {
+      return t.map(this.namespaceTransitionElementNonString.bind(this))
+    } else {
+      return this.namespaceTransitionElement(t)
+    }
   }
 
   namespaceTransitionConfig(t: CMTransitionConfig): CMTransitionConfig {
@@ -624,6 +657,10 @@ export class ComposableMachine {
     return tgIsString(t)
       ? this.namespaceStr(t)
       : this.namespaceTransitionConfig(t)
+  }
+
+  namespaceTransitionElementNonString(t: CMTransitionConfig): CMTransitionConfig {
+    return this.namespaceTransitionConfig(t)
   }
 
   // Prepend namespace to action name(s) if present

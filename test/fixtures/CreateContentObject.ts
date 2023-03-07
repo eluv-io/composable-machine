@@ -1,12 +1,13 @@
 import { ComposableMachine } from '../../src/ComposableMachine'
 import {
+  CMActionFunction,
   CMContextFieldDef,
-  CMMachineDefOrStateDef,
+  CMMachineDefOrStateDef, CMServiceFunction,
   XstateEvent
-} from '../../src/types'
+} from "../../src/types"
 
 export class CreateContentObject extends ComposableMachine {
-  act_SaveDraftInfo(): Function {
+  act_SaveDraftInfo(): CMActionFunction {
     return this.localAssign({
       writeToken: (_: object, event: XstateEvent) => event.data?.writeToken,
       objectId: (_: object, event: XstateEvent) => event.data?.objectId,
@@ -14,7 +15,7 @@ export class CreateContentObject extends ComposableMachine {
     })
   }
 
-  defActions(): Record<string, Function> {
+  defActions(): Record<string, CMActionFunction> {
     return {
       act_saveDraftInfo: this.act_SaveDraftInfo()
     }
@@ -112,7 +113,7 @@ export class CreateContentObject extends ComposableMachine {
     // )
   }
 
-  defServices(): Record<string, Function> {
+  defServices(): Record<string, CMServiceFunction> {
     return {
       svc_CreateContentObject: this.svc_CreateContentObject
     }

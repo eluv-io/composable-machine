@@ -2,12 +2,13 @@ import {
   ComposableMachine,
   IComposableMachineClass
 } from '../../src/ComposableMachine'
+
 import { CreateContentObject } from './CreateContentObject'
 import { FinalizeDraft } from './FinalizeDraft'
-import { CMContextFieldDef, CMMachineDefOrStateDef } from '../../src/types'
+import { CMActionFunction, CMContextFieldDef, CMMachineDefOrStateDef } from "../../src/types";
 
 export class CreateMaster extends ComposableMachine {
-  act_BuildMetadata(): Function {
+  act_BuildMetadata(): CMActionFunction {
     const self = this
     return this.localAssign({
       masterMetadata: (context: object) => ({
@@ -16,7 +17,7 @@ export class CreateMaster extends ComposableMachine {
     })
   }
 
-  defActions(): Record<string, Function> {
+  defActions(): Record<string, CMActionFunction> {
     return {
       act_BuildMetadata: this.act_BuildMetadata()
     }
