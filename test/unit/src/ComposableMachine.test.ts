@@ -1,4 +1,4 @@
-import { createMachine } from 'xstate'
+import { createMachine, interpret } from "xstate";
 
 const { ComposableMachine } = require('../../../src/ComposableMachine')
 const { CreateContentObject } = require('../../fixtures/CreateContentObject')
@@ -27,12 +27,13 @@ test('Service error handling', () => {
   const def = instance.def()
   const conf = instance.conf()
   const M = createMachine(def, conf)
-  const { initialState } = M
-  let nextState = M.transition(initialState, 'START');
-  console.log(nextState.value);
-  nextState = M.transition(nextState, { type: 'START' }); // event object
-  console.log(nextState.value);
-  nextState = M.transition(nextState, { type: 'RETRY' }); // event object
-  console.log(nextState.value);
+
+  const service = interpret(M).onTransition((state) => {
+    console.log(state.value)
+  })
+  service.start()
+  service.send('START' )
+  service.send('START' )
+  service.send('RETRY' )
 
 })

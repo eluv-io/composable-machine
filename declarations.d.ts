@@ -1,11 +1,9 @@
-/// <reference lib='dom' />
-
-declare interface TPair {
+declare interface CMPair {
   fst(): any;
   snd(): any;
 }
 
-declare interface TNotifier {
+declare interface CMNotifier {
   error(message: string): any;
   info(message: string): any;
   success(message: string): any;

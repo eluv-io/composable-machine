@@ -139,13 +139,13 @@ export class ComposableMachine {
   // Base class built-in actions
   baseActions(): Record<string, CMActionFunction> {
     return {
-      _act_LogArgs: this._act_LogArgs,
-      _act_NotifyError: this._act_NotifyError,
-      _act_NotifySuccess: this._act_NotifySuccess,
+      _act_LogArgs: this._act_LogArgs.bind(this),
+      _act_NotifyError: this._act_NotifyError.bind(this),
+      _act_NotifySuccess: this._act_NotifySuccess.bind(this),
       _act_SaveEntryToContext: this._act_SaveEntryToContext(),
       _act_SaveErrorToContext: this._act_SaveErrorToContext(),
       _act_SaveSuccessToContext: this._act_SaveSuccessToContext(),
-      _act_ValidateInputs: this._act_ValidateInputs
+      _act_ValidateInputs: this._act_ValidateInputs.bind(this)
     }
   }
 
@@ -419,7 +419,7 @@ export class ComposableMachine {
 
   // Retrieve field from local context (possibly remapped to parent context)
   localContext(context: Record<string, any>, fieldname: string): any {
-    console.log(`Get fieldname '${fieldname}' from local context`)
+    // console.log(`Get fieldname '${fieldname}' from local context`)
     return this.resolveIndirection(context, this.namespaceStr(fieldname))
   }
 
@@ -446,7 +446,7 @@ export class ComposableMachine {
 
   mergedInitialFieldDefs(): Record<string, CMContextFieldDef> {
     return filterKV(
-      (pair: TPair) => pair.snd().initial,
+      (pair: CMPair) => pair.snd().initial,
       this.mergedContextDef()
     )
   }
@@ -487,7 +487,7 @@ export class ComposableMachine {
 
   // Returns entries from merged context definition that are marked input: true
   mergedInputFieldDefs(): Record<string, CMContextFieldDef> {
-    return filterKV((pair: TPair) => pair.snd().input, this.mergedContextDef())
+    return filterKV((pair: CMPair) => pair.snd().input, this.mergedContextDef())
   }
 
   // Returns names of fields in local context that are marked input: true
@@ -692,7 +692,7 @@ export class ComposableMachine {
 
   // Retrieve field from parent context (possibly remapped to grandparent context)
   parentContext(context: Record<string, any>, fieldname: string): any {
-    console.log(`Get fieldname '${fieldname}' from parent`)
+    // console.log(`Get fieldname '${fieldname}' from parent`)
     return this.resolveIndirection(context, this.parentNamespaceStr(fieldname))
   }
 
@@ -786,13 +786,13 @@ export class ComposableMachine {
     context: Record<string, any>,
     namespacedFieldname: string
   ): any {
-    console.log(`resolving field '${namespacedFieldname}'`)
+    // console.log(`resolving field '${namespacedFieldname}'`)
     let val = context[namespacedFieldname]
     // If value is a function that returns a function, call it to unwrap one layer.
     // Repeat until it is a function that does not return a function
     // (trying to preserve Vue reactivity)
     while (tgIsFunction(val) && tgIsFunction(val(context))) {
-      console.log('unwrap function')
+      // console.log('unwrap function')
       val = val(context)
     }
     // Don't return val, it has been through a variable assignment and may

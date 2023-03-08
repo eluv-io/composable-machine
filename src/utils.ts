@@ -4,10 +4,10 @@ import { CMFoundSubmachine, CMMachineDefOrStateDef } from './types'
 
 // Default notifier (context._notifier)
 export const alertNotifier: Record<string, Function> = {
-  error: (message: string) => alert(`❌ ${message}`),
-  info: (message: string) => alert(`ℹ️ ${message}`),
-  success: (message: string) => alert(`️✅ℹ ${message}`),
-  warning: (message: string) => alert(`⚠️ ${message}`)
+  error: (message: string) => console.log(`❌ ${message}`),
+  info: (message: string) => console.log(`ℹ️ ${message}`),
+  success: (message: string) => console.log(`️✅ℹ ${message}`),
+  warning: (message: string) => console.log(`⚠️ ${message}`)
 }
 
 // Default logger (context._logger)
